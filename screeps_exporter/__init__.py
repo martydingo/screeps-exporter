@@ -92,6 +92,7 @@ class screeps_exporter:
 
     def __export_metrics__(self):
         self.__get_room_monitoring_memory__()
+        
         self.__build_metrics__()
         monitoringDataKeys = self.monitoring_targets.keys()
         for outerKey in monitoringDataKeys:
@@ -102,18 +103,23 @@ class screeps_exporter:
             monitorDictionary = self.room_monitoring_dict[splitMonitoringDataKeys[0]][splitMonitoringDataKeys[1]][splitMonitoringDataKeys[2]]
             
             for childKey in self.monitoring_targets[outerKey]:
-                value = monitorDictionary[childKey][splitMonitoringDataKeys[3]]
-                if(value == None):
-                    value = 0
-                if(metricKey == f"{self.prefix}_structures_storage_contents"):
-                    for resourceKey, resourceValue in value.items():
-                        self.metrics[metricKey].labels(room_name=roomName, id=childKey, resource=resourceKey, instance=self.config['exporter']['name']).set(resourceValue)
-                elif(metricKey == f"{self.prefix}_resources_droppedResources_resourceType"):
-                        self.metrics[metricKey].labels(room_name=roomName, id=childKey, instance=self.config['exporter']['name']).info({"resource": resourceKey})
-                elif(metricKey == f"{self.prefix}_resources_droppedResources_pos"):
-                        pass
-                else:
-                    # if(isinstance(value, int)):
-                    self.metrics[metricKey].labels(room_name=roomName, id=childKey, instance=self.config['exporter']['name']).set(value)
+                try:
+                    value = monitorDictionary[childKey][splitMonitoringDataKeys[3]]
+                    if(value == None):
+                        value = 0
+                    if(metricKey == f"{self.prefix}_structures_storage_contents"):
+                        for resourceKey, resourceValue in value.items():
+                            self.metrics[metricKey].labels(room_name=roomName, id=childKey, resource=resourceKey, instance=self.config['exporter']['name']).set(resourceValue)
+                    elif(metricKey == f"{self.prefix}_resources_droppedResources_resourceType"):
+                            self.metrics[metricKey].labels(room_name=roomName, id=childKey, instance=self.config['exporter']['name']).info({"resource": resourceKey})
+                    elif(metricKey == f"{self.prefix}_resources_droppedResources_pos"):
+                            pass
+                    else:
+                        # if(isinstance(value, int)):
+                        self.metrics[metricKey].labels(room_name=roomName, id=childKey, instance=self.config['exporter']['name']).set(value)
+                except KeyError:
+                    self.monitoring_targets[outerKey].remove(childKey)
+                    self.metrics[metricKey].remove(roomName, childKey, self.config['exporter']['name'])
         sleep(1)
+        
 
