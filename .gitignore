@@ -1,0 +1,7 @@
+venv
+.vscode
+*.bak
+__pycache__
+config.test.yaml
+config.yaml
+test.py

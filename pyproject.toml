@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "screeps-exporter"
+version = "0.1.0"
+description = "A prometheus exporter for screeps."
+authors = ["Martin George <marty@dingopaws.net>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+screepsapi = "^0.5.1"
+pyyaml = "^6.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

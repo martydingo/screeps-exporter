@@ -1,0 +1,7 @@
+auth:
+  # token:
+  hostname: "screepsServer.net"
+  port: 21025
+  secure: false
+  username: "User"
+  password: "Password"
