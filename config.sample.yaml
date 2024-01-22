@@ -5,3 +5,5 @@ auth:
   secure: false
   username: "User"
   password: "Password"
+exporter:
+  name: "development"
