@@ -1,9 +1,11 @@
 auth:
-  # token:
+  token: ""
   hostname: "screepsServer.net"
   port: 21025
   secure: false
   username: "User"
   password: "Password"
+  shard: "shard0"
 exporter:
   name: "development"
+  interval: 60

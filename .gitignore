@@ -1,7 +1,10 @@
 venv
 .vscode
 *.bak
+**/__pycache__
 __pycache__
 config.test.yaml
 config.yaml
 test.py
+config*.yaml
+!config.sample.yaml

@@ -32,15 +32,22 @@ class screeps_exporter:
     def __initialise_api_connection__(self):
         self.auth_config = self.config["auth"]
         fqdn = f"{self.auth_config["hostname"]}:{self.auth_config["port"]}"
-        self.screepsApi = screepsapi.API(
-            u=self.auth_config["username"],
-            p=self.auth_config["password"],
-            host=fqdn,
-            secure=self.auth_config["secure"],
-        )
+        if(self.auth_config["token"]):
+            self.screepsApi = screepsapi.API(
+                token=self.auth_config["token"],
+                host=fqdn,
+                secure=self.auth_config["secure"],
+            )
+        else:
+            self.screepsApi = screepsapi.API(
+                u=self.auth_config["username"],
+                p=self.auth_config["password"],
+                host=fqdn,
+                secure=self.auth_config["secure"],
+            )
 
     def __get_room_monitoring_memory__(self):
-        roomMemory = self.screepsApi.memory(path="rooms")
+        roomMemory = self.screepsApi.memory(path="rooms", shard=self.auth_config["shard"])
         for roomName, roomMonitoringData in roomMemory['data'].items():
             self.room_monitoring_dict.update({roomName: roomMonitoringData['monitoring']})
 
@@ -62,14 +69,16 @@ class screeps_exporter:
             for roomMonitorKey, roomMonitorValue in roomMonitoringData.items():
                 prefix = f"{roomMonitorKey}"
                 keyArray = self.__recurse_monitoring_dict_for_keys__(roomMonitorValue)
-                
                 for key in keyArray:
                     topLevelKey = f"{prefix}_{key}"
                     topLevelChildren = self.__recurse_monitoring_dict_for_keys__(roomMonitorValue[key])
                     if(len(topLevelChildren) > 0):
-                        childrenKeys = self.__recurse_monitoring_dict_for_keys__(roomMonitorValue[key][topLevelChildren[0]])
-                        for innerKey in childrenKeys:
-                            self.monitoring_targets.update({f"{roomName}_{topLevelKey}_{innerKey}": topLevelChildren})
+                        if(type(roomMonitorValue[key][topLevelChildren[0]]) == dict):
+                            childrenKeys = self.__recurse_monitoring_dict_for_keys__(roomMonitorValue[key][topLevelChildren[0]])
+                            for innerKey in childrenKeys:
+                                self.monitoring_targets.update({f"{roomName}_{topLevelKey}_{innerKey}": topLevelChildren})
+                        
+                    
 
     def __build_metrics__(self):
         monitoringDataKeys = self.monitoring_targets.keys()
@@ -80,7 +89,7 @@ class screeps_exporter:
             try:
                self.metrics[metricKey]
             except KeyError:
-                if(metricKey == f"{self.prefix}_structures_storage_contents"):
+                if(metricKey == f"{self.prefix}_structures_storage_contents" or metricKey == f"{self.prefix}_resources_ruins_contents"):
                     self.metrics.update({metricKey: Gauge(metricKey, f"Gauge for{metricKey}", ["room_name", "id", "resource", "instance"])})
                 elif(metricKey == f"{self.prefix}_resources_droppedResources_resourceType"):
                     self.metrics.update({metricKey: Info(metricKey, f"Gauge for{metricKey}", ["room_name", "id", "instance"])})
@@ -107,11 +116,11 @@ class screeps_exporter:
                     value = monitorDictionary[childKey][splitMonitoringDataKeys[3]]
                     if(value == None):
                         value = 0
-                    if(metricKey == f"{self.prefix}_structures_storage_contents"):
+                    if(metricKey == f"{self.prefix}_structures_storage_contents" or metricKey == f"{self.prefix}_resources_ruins_contents"):
                         for resourceKey, resourceValue in value.items():
                             self.metrics[metricKey].labels(room_name=roomName, id=childKey, resource=resourceKey, instance=self.config['exporter']['name']).set(resourceValue)
                     elif(metricKey == f"{self.prefix}_resources_droppedResources_resourceType"):
-                            self.metrics[metricKey].labels(room_name=roomName, id=childKey, instance=self.config['exporter']['name']).info({"resource": resourceKey})
+                            self.metrics[metricKey].labels(room_name=roomName, id=childKey, instance=self.config['exporter']['name']).info({"resource": value})
                     elif(metricKey == f"{self.prefix}_resources_droppedResources_pos"):
                             pass
                     else:
@@ -120,6 +129,6 @@ class screeps_exporter:
                 except KeyError:
                     self.monitoring_targets[outerKey].remove(childKey)
                     self.metrics[metricKey].remove(roomName, childKey, self.config['exporter']['name'])
-        sleep(1)
+        sleep(self.config['exporter']['interval'])
         
 
