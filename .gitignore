@@ -1,0 +1,5 @@
+memory.json
+*.pyc
+__pycache__
+config.yml
+poetry.lock
