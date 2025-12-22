@@ -1,0 +1,8 @@
+version: "3.0"
+services:
+  screeps_exporter:
+    image: martydingo/screeps-exporter:latest
+    ports:
+      - 8000:8000
+    volumes:
+      - ./config.yml:/app/config.yml
