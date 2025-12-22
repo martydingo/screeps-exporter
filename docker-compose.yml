@@ -1,4 +1,3 @@
-version: "3.0"
 services:
   screeps_exporter:
     image: martydingo/screeps-exporter:latest
