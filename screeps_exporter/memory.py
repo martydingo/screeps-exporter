@@ -39,6 +39,10 @@ class Memory:
         self.createRoomEnergyMetrics()
         self.createRoomSourceMetrics()
         self.createRoomControllerMetrics()
+        self.createRoomDroppedResourceMetrics()
+        self.createRoomStructureMetrics()
+        self.createSpawnMetrics()
+        self.createJobMetrics()
 
     def createRoomEnergyMetrics(self):
         self.metrics["energy"] = {}
@@ -171,6 +175,115 @@ class Memory:
             except KeyError:
                 pass
 
+    def createRoomDroppedResourceMetrics(self):
+        self.metrics["droppedResources"] = Gauge(
+            "screeps_dropped_resources",
+            documentation="Tracks the amount and the resource type of dropped resources within a given room",
+            labelnames=["room", "resource_id", "resource_type"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                droppedResourceData = self.roomMemory[roomName]["resources"]
+                for droppedResourceId in droppedResourceData:
+                    self.metrics["droppedResources"].labels(
+                        room=roomName,
+                        resource_id=droppedResourceId,
+                        resource_type=self.roomMemory[roomName]["resources"][
+                            droppedResourceId
+                        ]["resource"],
+                    )
+            except KeyError:
+                pass
+
+    def createRoomStructureMetrics(self):
+        self.metrics["structures"] = {}
+
+        self.createRoomExtensionMetrics()
+
+    def createRoomExtensionMetrics(self):
+        self.metrics["structures"]["extensions"] = Gauge(
+            "screeps_structures_extensions",
+            documentation="Tracks the amount of energy stored within extensions",
+            labelnames=["room", "extension"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                extensionData = self.roomMemory[roomName]["structures"]["extensions"]
+                for extensionId in extensionData:
+                    self.metrics["structures"]["extensions"].labels(
+                        room=roomName, extension=extensionId
+                    )
+            except KeyError as error:
+                pass
+
+    def createSpawnMetrics(self):
+        self.metrics["spawns"] = {}
+        self.metrics["spawns"]["energy"] = {}
+        self.metrics["spawns"]["energy"]["amount"] = Gauge(
+            "screeps_spawns_energy",
+            documentation="Tracks the amount of energy stored within spawners",
+            labelnames=["room", "spawn"],
+        )
+        self.metrics["spawns"]["energy"]["capacity"] = Gauge(
+            "screeps_spawns_capacity",
+            documentation="Tracks the total capacity of energy that can be stored within spawners",
+            labelnames=["room", "spawn"],
+        )
+        self.metrics["spawns"]["spawning"] = Enum(
+            "screeps_spawns_spawning",
+            documentation="Whether a given spawner is spawning a creep",
+            labelnames=["room", "spawn"],
+            states=["spawning", "idle"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                spawnData = self.spawnMemory
+                for spawnName in spawnData:
+                    self.metrics["spawns"]["energy"]["amount"].labels(
+                        room=roomName, spawn=spawnName
+                    )
+                    self.metrics["spawns"]["energy"]["capacity"].labels(
+                        room=roomName, spawn=spawnName
+                    )
+                    self.metrics["spawns"]["spawning"].labels(
+                        room=roomName, spawn=spawnName
+                    )
+            except KeyError as error:
+                # print(f"createSpawnMetrics: {error}")
+                pass
+
+    def createJobMetrics(self):
+        self.metrics["jobs"] = {}
+        self.metrics["jobs"]["count"] = {}
+        self.metrics["jobs"]["count"]["type"] = Gauge(
+            "screeps_jobs_count_type",
+            documentation="Tracks the number of jobs within the jobs queue",
+            labelnames=["job_type"],
+        )
+
+        jobTypes = list(
+            map(lambda jobName: self.jobMemory[jobName]["type"], self.jobMemory)
+        )
+
+        self.metrics["jobs"]["count"]["status"] = Gauge(
+            "screeps_jobs_count_name",
+            documentation="Tracks the number of jobs within the jobs queue",
+            labelnames=["status"],
+        )
+
+        jobStatusNames = list(
+            map(lambda jobName: self.jobMemory[jobName]["status"], self.jobMemory)
+        )
+
+        for jobType in jobTypes:
+            self.metrics["jobs"]["count"]["type"].labels(job_type=jobType)
+
+        for jobStatusName in jobStatusNames:
+            self.metrics["jobs"]["count"]["status"].labels(status=jobStatusName)
+
     def pollMetrics(self):
         memory = self.pollMemory()
 
@@ -187,6 +300,10 @@ class Memory:
         self.pollRoomEnergyMetrics()
         self.pollRoomSourceMetrics()
         self.pollRoomControllerMetrics()
+        self.pollRoomDroppedResourceMetrics()
+        self.pollRoomExtensionMetrics()
+        self.pollSpawnMetrics()
+        self.pollJobMetrics()
 
     def pollRoomEnergyMetrics(self):
         for roomName in self.roomMemory:
@@ -252,9 +369,7 @@ class Memory:
                         self.metrics["controllers"]["safeMode"]["timeLeft"].labels(
                             room=roomName, controller=controllerId
                         ).set(controllerData[controllerId]["safeMode"]["timeLeft"])
-                    except KeyError as error:
-                        print(error)
-                        print(controllerData[controllerId]["safeMode"].keys())
+                    except KeyError:
                         self.metrics["controllers"]["safeMode"]["timeLeft"].labels(
                             room=roomName, controller=controllerId
                         ).set(0)
@@ -267,5 +382,95 @@ class Memory:
                         room=roomName, controller=controllerId
                     ).set(controllerData[controllerId]["level"])
 
-            except KeyError as error:
-                print(error)
+            except KeyError:
+                pass
+
+    def pollRoomDroppedResourceMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                droppedResourceData = self.roomMemory[roomName]["resources"]
+                for droppedResourceId in droppedResourceData:
+                    self.metrics["droppedResources"].labels(
+                        room=roomName,
+                        resource_id=droppedResourceId,
+                        resource_type=self.roomMemory[roomName]["resources"][
+                            droppedResourceId
+                        ]["resource"],
+                    ).set(
+                        self.roomMemory[roomName]["resources"][droppedResourceId][
+                            "amount"
+                        ]
+                    )
+            except KeyError:
+                pass
+
+    def pollRoomExtensionMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                extensionData = self.roomMemory[roomName]["structures"]["extensions"]
+                for extensionId in extensionData:
+                    self.metrics["structures"]["extensions"].labels(
+                        room=roomName, extension=extensionId
+                    ).set(
+                        self.roomMemory[roomName]["structures"]["extensions"][
+                            extensionId
+                        ]["energy"]["amount"]
+                    )
+            except KeyError:
+                pass
+
+    def pollSpawnMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                spawnData = self.spawnMemory
+                for spawnName in spawnData:
+                    self.metrics["spawns"]["energy"]["amount"].labels(
+                        room=roomName, spawn=spawnName
+                    ).set(self.spawnMemory[spawnName]["energy"]["amount"])
+
+                    self.metrics["spawns"]["energy"]["capacity"].labels(
+                        room=roomName, spawn=spawnName
+                    ).set(self.spawnMemory[spawnName]["energy"]["capacity"])
+
+                    if self.spawnMemory[spawnName]["spawning"] == True:
+                        spawnerState = "spawning"
+                    else:
+                        spawnerState = "idle"
+
+                    self.metrics["spawns"]["spawning"].labels(
+                        room=roomName, spawn=spawnName
+                    ).state(spawnerState)
+
+            except KeyError:
+                pass
+
+    def pollJobMetrics(self):
+        typeCounts = {}
+        jobTypes = list(
+            map(lambda jobName: self.jobMemory[jobName]["type"], self.jobMemory)
+        )
+
+        for jobType in jobTypes:
+            typeCounts[jobType] = 0
+
+        statusCounts = {}
+        jobStatusNames = list(
+            map(lambda jobName: self.jobMemory[jobName]["status"], self.jobMemory)
+        )
+
+        for statusName in jobStatusNames:
+            statusCounts[statusName] = 0
+
+        for jobName, jobData in self.jobMemory.items():
+            typeCounts[jobData["type"]] = typeCounts[jobData["type"]] + 1
+            statusCounts[jobData["status"]] = statusCounts[jobData["status"]] + 1
+
+        for typeName, typeCount in typeCounts.items():
+            self.metrics["jobs"]["count"]["type"].labels(job_type=typeName).set(
+                typeCount
+            )
+
+        for statusName, statusCount in statusCounts.items():
+            self.metrics["jobs"]["count"]["status"].labels(status=statusName).set(
+                statusCount
+            )
