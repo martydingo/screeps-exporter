@@ -3,3 +3,5 @@ screeps:
   password: ""
   token: ""
   shard: shard3
+exporter:
+  interval: 10

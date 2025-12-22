@@ -16,7 +16,6 @@ class Memory:
         try:
             while True:
                 self.pollMetrics()
-                sleep(3)
 
         except KeyboardInterrupt:
             exit()
@@ -108,6 +107,8 @@ class Memory:
         self.creepMemory = memory["creeps"]
 
         self.pollRoomMetrics()
+
+        sleep(self.config["exporter"]["interval"])
 
     def pollRoomMetrics(self):
         self.pollRoomEnergyMetrics()
