@@ -252,7 +252,7 @@ class Memory:
         self.metrics["spawns"]["energy"]["amount"] = Gauge(
             "screeps_spawns_energy",
             documentation="Tracks the amount of energy stored within spawners",
-            labelnames=["room", "spawn"],
+            labelnames=["spawn"],
         )
         self.metrics["spawns"]["energy"]["capacity"] = Gauge(
             "screeps_spawns_capacity",
