@@ -199,7 +199,35 @@ class Memory:
     def createRoomStructureMetrics(self):
         self.metrics["structures"] = {}
 
+        self.createRoomStorageMetrics()
         self.createRoomExtensionMetrics()
+
+    def createRoomStorageMetrics(self):
+        self.metrics["structures"]["storage"] = {}
+        self.metrics["structures"]["storage"]["amount"] = Gauge(
+            "screeps_structures_storage_amount",
+            documentation="Tracks the amount of resources stored within storage for a given room",
+            labelnames=["room", "storage", "resource"],
+        )
+        self.metrics["structures"]["storage"]["capacity"] = Gauge(
+            "screeps_structures_storage_capacity",
+            documentation="Tracks the total capacity of resources that can be stored within storage for a given room",
+            labelnames=["room", "storage", "resource"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                storageData = self.roomMemory[roomName]["structures"]["storage"]
+                for storageId in storageData:
+                    for resource in storageData[storageId]["resources"]:
+                        self.metrics["structures"]["storage"]["amount"].labels(
+                            room=roomName, storage=storageId, resource=resource
+                        )
+                        self.metrics["structures"]["storage"]["capacity"].labels(
+                            room=roomName, storage=storageId, resource=resource
+                        )
+            except KeyError as error:
+                pass
 
     def createRoomExtensionMetrics(self):
         self.metrics["structures"]["extensions"] = Gauge(
@@ -301,6 +329,7 @@ class Memory:
         self.pollRoomSourceMetrics()
         self.pollRoomControllerMetrics()
         self.pollRoomDroppedResourceMetrics()
+        self.pollRoomStorageMetrics()
         self.pollRoomExtensionMetrics()
         self.pollSpawnMetrics()
         self.pollJobMetrics()
@@ -402,6 +431,29 @@ class Memory:
                         ]
                     )
             except KeyError:
+                pass
+
+    def pollRoomStorageMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                storageData = self.roomMemory[roomName]["structures"]["storage"]
+                for storageId in storageData:
+                    for resource in storageData[storageId]["resources"]:
+                        self.metrics["structures"]["storage"]["amount"].labels(
+                            room=roomName, storage=storageId, resource=resource
+                        ).set(
+                            self.roomMemory[roomName]["structures"]["storage"][
+                                storageId
+                            ]["resources"][resource]["amount"]
+                        )
+                        self.metrics["structures"]["storage"]["capacity"].labels(
+                            room=roomName, storage=storageId, resource=resource
+                        ).set(
+                            self.roomMemory[roomName]["structures"]["storage"][
+                                storageId
+                            ]["resources"][resource]["capacity"]
+                        )
+            except KeyError as error:
                 pass
 
     def pollRoomExtensionMetrics(self):
