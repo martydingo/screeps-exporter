@@ -262,7 +262,7 @@ class Memory:
         self.metrics["spawns"]["spawning"] = Enum(
             "screeps_spawns_spawning",
             documentation="Whether a given spawner is spawning a creep",
-            labelnames=["room", "spawn"],
+            labelnames=["spawn"],
             states=["spawning", "idle"],
         )
 
