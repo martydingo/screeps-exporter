@@ -257,7 +257,7 @@ class Memory:
         self.metrics["spawns"]["energy"]["capacity"] = Gauge(
             "screeps_spawns_capacity",
             documentation="Tracks the total capacity of energy that can be stored within spawners",
-            labelnames=["room", "spawn"],
+            labelnames=["spawn"],
         )
         self.metrics["spawns"]["spawning"] = Enum(
             "screeps_spawns_spawning",
@@ -266,22 +266,15 @@ class Memory:
             states=["spawning", "idle"],
         )
 
-        for roomName in self.roomMemory:
-            try:
-                spawnData = self.spawnMemory
-                for spawnName in spawnData:
-                    self.metrics["spawns"]["energy"]["amount"].labels(
-                        room=roomName, spawn=spawnName
-                    )
-                    self.metrics["spawns"]["energy"]["capacity"].labels(
-                        room=roomName, spawn=spawnName
-                    )
-                    self.metrics["spawns"]["spawning"].labels(
-                        room=roomName, spawn=spawnName
-                    )
-            except KeyError as error:
-                # print(f"createSpawnMetrics: {error}")
-                pass
+        try:
+            spawnData = self.spawnMemory
+            for spawnName in spawnData:
+                self.metrics["spawns"]["energy"]["amount"].labels(spawn=spawnName)
+                self.metrics["spawns"]["energy"]["capacity"].labels(spawn=spawnName)
+                self.metrics["spawns"]["spawning"].labels(spawn=spawnName)
+        except KeyError as error:
+            # print(f"createSpawnMetrics: {error}")
+            pass
 
     def createJobMetrics(self):
         self.metrics["jobs"] = {}
@@ -472,29 +465,27 @@ class Memory:
                 pass
 
     def pollSpawnMetrics(self):
-        for roomName in self.roomMemory:
-            try:
-                spawnData = self.spawnMemory
-                for spawnName in spawnData:
-                    self.metrics["spawns"]["energy"]["amount"].labels(
-                        room=roomName, spawn=spawnName
-                    ).set(self.spawnMemory[spawnName]["energy"]["amount"])
+        try:
+            spawnData = self.spawnMemory
+            for spawnName in spawnData:
+                self.metrics["spawns"]["energy"]["amount"].labels(spawn=spawnName).set(
+                    self.spawnMemory[spawnName]["energy"]["amount"]
+                )
 
-                    self.metrics["spawns"]["energy"]["capacity"].labels(
-                        room=roomName, spawn=spawnName
-                    ).set(self.spawnMemory[spawnName]["energy"]["capacity"])
+                self.metrics["spawns"]["energy"]["capacity"].labels(
+                    spawn=spawnName
+                ).set(self.spawnMemory[spawnName]["energy"]["capacity"])
 
-                    if self.spawnMemory[spawnName]["spawning"] == True:
-                        spawnerState = "spawning"
-                    else:
-                        spawnerState = "idle"
+                if self.spawnMemory[spawnName]["spawning"] == True:
+                    spawnerState = "spawning"
+                else:
+                    spawnerState = "idle"
+                self.metrics["spawns"]["spawning"].labels(spawn=spawnName).state(
+                    spawnerState
+                )
 
-                    self.metrics["spawns"]["spawning"].labels(
-                        room=roomName, spawn=spawnName
-                    ).state(spawnerState)
-
-            except KeyError:
-                pass
+        except KeyError:
+            pass
 
     def pollJobMetrics(self):
         typeCounts = {}
