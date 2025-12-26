@@ -47,7 +47,9 @@ class Syslog(Socket):
         msg = regexSearch[3]
 
         # extraData = {"structured_data": {"severity": severity, "module": module}}
-        payload = json.dumps({"severity": severity, "module": module, "message": msg})
+        payload = json.dumps(
+            {"color": color, "severity": severity, "module": module, "message": msg}
+        )
 
         print(payload)
 
