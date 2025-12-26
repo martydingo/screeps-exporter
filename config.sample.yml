@@ -5,3 +5,7 @@ screeps:
   shard: shard3
 exporter:
   interval: 10
+syslog:
+  enabled: false
+  address: 1.2.3.4
+  port: 514

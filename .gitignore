@@ -3,3 +3,4 @@ memory.json
 __pycache__
 config.yml
 poetry.lock
+test.py
