@@ -408,23 +408,38 @@ class Memory:
                 pass
 
     def pollRoomDroppedResourceMetrics(self):
+        droppedResourceLabels = set()
         for roomName in self.roomMemory:
             try:
                 droppedResourceData = self.roomMemory[roomName]["resources"]
                 for droppedResourceId in droppedResourceData:
+                    labels = (
+                        roomName,
+                        droppedResourceId,
+                        self.roomMemory[roomName]["resources"][droppedResourceId][
+                            "resource"
+                        ],
+                    )
+
+                    droppedResourceLabels.add(labels)
+
                     self.metrics["droppedResources"].labels(
-                        room=roomName,
-                        resource_id=droppedResourceId,
-                        resource_type=self.roomMemory[roomName]["resources"][
-                            droppedResourceId
-                        ]["resource"],
+                        room=labels[0],
+                        resource_id=labels[1],
+                        resource_type=labels[2],
                     ).set(
                         self.roomMemory[roomName]["resources"][droppedResourceId][
                             "amount"
                         ]
                     )
+
             except KeyError:
                 pass
+
+            metric = self.metrics["droppedResources"]
+            for labels in list(metric._metrics.keys()):
+                if labels not in droppedResourceLabels:
+                    metric.remove(*labels)
 
     def pollRoomStorageMetrics(self):
         for roomName in self.roomMemory:
