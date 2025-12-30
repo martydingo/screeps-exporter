@@ -12,7 +12,6 @@ class API:
 
         if token != None:
             self.api = screepsapi.API(u=user, token=token)
-            self.api.get()
         else:
             password = self.config["screeps"]["password"]
             self.api = screepsapi.API(u=user, p=password)
