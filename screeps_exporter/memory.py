@@ -274,12 +274,12 @@ class Memory:
         self.metrics["structures"]["links"]["amount"] = Gauge(
             "screeps_structures_links_amount",
             documentation="Tracks the amount of energy stored within links",
-            labelnames=["room", "link"],
+            labelnames=["room", "link", "linkType"],
         )
         self.metrics["structures"]["links"]["capacity"] = Gauge(
             "screeps_structures_links_capacity",
             documentation="Tracks the total capacity of energy that can bestored within links",
-            labelnames=["room", "link"],
+            labelnames=["room", "link", "linkType"],
         )
 
         for roomName in self.roomMemory:
@@ -287,10 +287,14 @@ class Memory:
                 linkData = self.roomMemory[roomName]["structures"]["links"]
                 for linkId in linkData:
                     self.metrics["structures"]["links"]["amount"].labels(
-                        room=roomName, link=linkId
+                        room=roomName,
+                        link=linkId,
+                        linkType=linkData[linkId]["linkType"],
                     )
                     self.metrics["structures"]["links"]["capacity"].labels(
-                        room=roomName, link=linkId
+                        room=roomName,
+                        link=linkId,
+                        linkType=linkData[linkId]["linkType"],
                     )
 
             except KeyError as error:
@@ -549,14 +553,18 @@ class Memory:
                 linkData = self.roomMemory[roomName]["structures"]["links"]
                 for linkId in linkData:
                     self.metrics["structures"]["links"]["amount"].labels(
-                        room=roomName, link=linkId
+                        room=roomName,
+                        link=linkId,
+                        linkType=linkData[linkId]["linkType"],
                     ).set(
                         self.roomMemory[roomName]["structures"]["links"][linkId][
                             "energy"
                         ]["amount"]
                     )
                     self.metrics["structures"]["links"]["capacity"].labels(
-                        room=roomName, link=linkId
+                        room=roomName,
+                        link=linkId,
+                        linkType=linkData[linkId]["linkType"],
                     ).set(
                         self.roomMemory[roomName]["structures"]["links"][linkId][
                             "energy"
