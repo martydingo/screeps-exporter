@@ -32,7 +32,9 @@ class Memory:
         self.spawnMemory = memory["spawns"]
         self.jobMemory = memory["jobs"]
         self.creepMemory = memory["creeps"]
+        self.globalMemory = memory["global"]
 
+        self.createGlobalMetrics()
         self.createRoomMetrics()
 
     def createRoomMetrics(self):
@@ -43,6 +45,26 @@ class Memory:
         self.createRoomStructureMetrics()
         self.createSpawnMetrics()
         self.createJobMetrics()
+
+    def createGlobalMetrics(self):
+        self.metrics["global"] = {}
+        self.createGlobalGclMetrics()
+
+    def createGlobalGclMetrics(self):
+        self.metrics["global"]["gcl"] = {}
+        self.metrics["global"]["gcl"]["level"] = Gauge(
+            "screeps_global_gcl_level",
+            documentation="The current global control level of the player",
+        )
+        self.metrics["global"]["gcl"]["progress"] = Gauge(
+            "screeps_global_gcl_progress",
+            documentation="The current amount of progress to the next global control level",
+        )
+        self.metrics["global"]["gcl"]["nextLevel"] = Gauge(
+            "screeps_global_gcl_next_level",
+            documentation="The total progress required to progress to the next global control level",
+        )
+        # self.metrics[""]
 
     def createRoomEnergyMetrics(self):
         self.metrics["energy"] = {}
@@ -65,8 +87,8 @@ class Memory:
                 self.metrics["energy"]["amount"].labels(room=roomName)
                 self.metrics["energy"]["capacity"].labels(room=roomName)
 
-            except KeyError:
-                pass
+            except KeyError as error:
+                print(f"create_screeps_room_energy: {error}")
 
     def createRoomSourceMetrics(self):
         self.metrics["sources"] = {}
@@ -100,8 +122,8 @@ class Memory:
                         room=roomName, source=sourceId
                     )
 
-            except KeyError:
-                pass
+            except KeyError as error:
+                print(f"create_screeps_sources: {error}")
 
     def createRoomControllerMetrics(self):
         self.metrics["controllers"] = {}
@@ -172,8 +194,8 @@ class Memory:
                         room=roomName, controller=controllerId
                     )
 
-            except KeyError:
-                pass
+            except KeyError as error:
+                print(f"create_screeps_controllers: {error}")
 
     def createRoomDroppedResourceMetrics(self):
         self.metrics["droppedResources"] = Gauge(
@@ -193,14 +215,15 @@ class Memory:
                             droppedResourceId
                         ]["resource"],
                     )
-            except KeyError:
-                pass
+            except KeyError as error:
+                print(f"create_screeps_dropped_resources: {error}")
 
     def createRoomStructureMetrics(self):
         self.metrics["structures"] = {}
 
         self.createRoomStorageMetrics()
         self.createRoomExtensionMetrics()
+        self.createRoomLinkMetrics()
 
     def createRoomStorageMetrics(self):
         self.metrics["structures"]["storage"] = {}
@@ -227,7 +250,7 @@ class Memory:
                             room=roomName, storage=storageId, resource=resource
                         )
             except KeyError as error:
-                pass
+                print(f"create_screeps_storage: {error}")
 
     def createRoomExtensionMetrics(self):
         self.metrics["structures"]["extensions"] = Gauge(
@@ -244,7 +267,34 @@ class Memory:
                         room=roomName, extension=extensionId
                     )
             except KeyError as error:
-                pass
+                print(f"create_screeps_structures_extensions: {error}")
+
+    def createRoomLinkMetrics(self):
+        self.metrics["structures"]["links"] = {}
+        self.metrics["structures"]["links"]["amount"] = Gauge(
+            "screeps_structures_links_amount",
+            documentation="Tracks the amount of energy stored within links",
+            labelnames=["room", "link"],
+        )
+        self.metrics["structures"]["links"]["capacity"] = Gauge(
+            "screeps_structures_links_capacity",
+            documentation="Tracks the total capacity of energy that can bestored within links",
+            labelnames=["room", "link"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                linkData = self.roomMemory[roomName]["structures"]["links"]
+                for linkId in linkData:
+                    self.metrics["structures"]["links"]["amount"].labels(
+                        room=roomName, link=linkId
+                    )
+                    self.metrics["structures"]["links"]["capacity"].labels(
+                        room=roomName, link=linkId
+                    )
+
+            except KeyError as error:
+                print(f"create_screeps_structures_links: {error}")
 
     def createSpawnMetrics(self):
         self.metrics["spawns"] = {}
@@ -273,8 +323,7 @@ class Memory:
                 self.metrics["spawns"]["energy"]["capacity"].labels(spawn=spawnName)
                 self.metrics["spawns"]["spawning"].labels(spawn=spawnName)
         except KeyError as error:
-            # print(f"createSpawnMetrics: {error}")
-            pass
+            print(f"create_screeps_spawns: {error}")
 
     def createJobMetrics(self):
         self.metrics["jobs"] = {}
@@ -285,25 +334,28 @@ class Memory:
             labelnames=["job_type"],
         )
 
-        jobTypes = list(
-            map(lambda jobName: self.jobMemory[jobName]["type"], self.jobMemory)
-        )
+        try:
+            jobTypes = list(
+                map(lambda jobName: self.jobMemory[jobName]["type"], self.jobMemory)
+            )
 
-        self.metrics["jobs"]["count"]["status"] = Gauge(
-            "screeps_jobs_count_name",
-            documentation="Tracks the number of jobs within the jobs queue",
-            labelnames=["status"],
-        )
+            self.metrics["jobs"]["count"]["status"] = Gauge(
+                "screeps_jobs_count_name",
+                documentation="Tracks the number of jobs within the jobs queue",
+                labelnames=["status"],
+            )
 
-        jobStatusNames = list(
-            map(lambda jobName: self.jobMemory[jobName]["status"], self.jobMemory)
-        )
+            jobStatusNames = list(
+                map(lambda jobName: self.jobMemory[jobName]["status"], self.jobMemory)
+            )
 
-        for jobType in jobTypes:
-            self.metrics["jobs"]["count"]["type"].labels(job_type=jobType)
+            for jobType in jobTypes:
+                self.metrics["jobs"]["count"]["type"].labels(job_type=jobType)
 
-        for jobStatusName in jobStatusNames:
-            self.metrics["jobs"]["count"]["status"].labels(status=jobStatusName)
+            for jobStatusName in jobStatusNames:
+                self.metrics["jobs"]["count"]["status"].labels(status=jobStatusName)
+        except KeyError as error:
+            print(f"create_screeps_jobs: {error}")
 
     def pollMetrics(self):
         memory = self.pollMemory()
@@ -312,10 +364,21 @@ class Memory:
         self.spawnMemory = memory["spawns"]
         self.jobMemory = memory["jobs"]
         self.creepMemory = memory["creeps"]
+        self.globalMemory = memory["global"]
 
+        self.pollGlobalGclMetrics()
         self.pollRoomMetrics()
 
         sleep(self.config["exporter"]["interval"])
+
+    def pollGlobalGclMetrics(self):
+        self.metrics["global"]["gcl"]["level"].set(self.globalMemory["gcl"]["level"])
+        self.metrics["global"]["gcl"]["progress"].set(
+            self.globalMemory["gcl"]["progress"]
+        )
+        self.metrics["global"]["gcl"]["nextLevel"].set(
+            self.globalMemory["gcl"]["nextLevel"]
+        )
 
     def pollRoomMetrics(self):
         self.pollRoomEnergyMetrics()
@@ -324,6 +387,7 @@ class Memory:
         self.pollRoomDroppedResourceMetrics()
         self.pollRoomStorageMetrics()
         self.pollRoomExtensionMetrics()
+        self.pollRoomLinkMetrics()
         self.pollSpawnMetrics()
         self.pollJobMetrics()
 
@@ -339,8 +403,8 @@ class Memory:
                     energyData["capacity"]
                 )
 
-            except KeyError:
-                pass
+            except KeyError as error:
+                print(f"poll_screeps_room_energy: {error}")
 
     def pollRoomSourceMetrics(self):
         for roomName in self.roomMemory:
@@ -358,8 +422,8 @@ class Memory:
                         room=roomName, source=sourceId
                     ).set(sourceData[sourceId]["regeneration"])
 
-            except KeyError:
-                pass
+            except KeyError as error:
+                print(f"poll_screeps_sources: {error}")
 
     def pollRoomControllerMetrics(self):
         for roomName in self.roomMemory:
@@ -404,8 +468,8 @@ class Memory:
                         room=roomName, controller=controllerId
                     ).set(controllerData[controllerId]["level"])
 
-            except KeyError:
-                pass
+            except KeyError as error:
+                print(f"poll_screeps_controllers: {error}")
 
     def pollRoomDroppedResourceMetrics(self):
         droppedResourceLabels = set()
@@ -433,8 +497,8 @@ class Memory:
                         ]
                     )
 
-            except KeyError:
-                pass
+            except KeyError as error:
+                print(f"poll_screeps_dropped_resources: {error}")
 
             metric = self.metrics["droppedResources"]
             for labels in list(metric._metrics.keys()):
@@ -462,7 +526,7 @@ class Memory:
                             ]["resources"][resource]["capacity"]
                         )
             except KeyError as error:
-                pass
+                print(f"poll_screeps_storage: {error}")
 
     def pollRoomExtensionMetrics(self):
         for roomName in self.roomMemory:
@@ -476,8 +540,31 @@ class Memory:
                             extensionId
                         ]["energy"]["amount"]
                     )
-            except KeyError:
-                pass
+            except KeyError as error:
+                print(f"poll_screeps_extensions: {error}")
+
+    def pollRoomLinkMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                linkData = self.roomMemory[roomName]["structures"]["links"]
+                for linkId in linkData:
+                    self.metrics["structures"]["links"]["amount"].labels(
+                        room=roomName, link=linkId
+                    ).set(
+                        self.roomMemory[roomName]["structures"]["links"][linkId][
+                            "energy"
+                        ]["amount"]
+                    )
+                    self.metrics["structures"]["links"]["capacity"].labels(
+                        room=roomName, link=linkId
+                    ).set(
+                        self.roomMemory[roomName]["structures"]["links"][linkId][
+                            "energy"
+                        ]["capacity"]
+                    )
+
+            except KeyError as error:
+                print(f"create_screeps_structures_links: {error}")
 
     def pollSpawnMetrics(self):
         try:
@@ -499,36 +586,39 @@ class Memory:
                     spawnerState
                 )
 
-        except KeyError:
-            pass
+        except KeyError as error:
+            print(f"poll_screeps_spawns: {error}")
 
     def pollJobMetrics(self):
-        typeCounts = {}
-        jobTypes = list(
-            map(lambda jobName: self.jobMemory[jobName]["type"], self.jobMemory)
-        )
-
-        for jobType in jobTypes:
-            typeCounts[jobType] = 0
-
-        statusCounts = {}
-        jobStatusNames = list(
-            map(lambda jobName: self.jobMemory[jobName]["status"], self.jobMemory)
-        )
-
-        for statusName in jobStatusNames:
-            statusCounts[statusName] = 0
-
-        for jobName, jobData in self.jobMemory.items():
-            typeCounts[jobData["type"]] = typeCounts[jobData["type"]] + 1
-            statusCounts[jobData["status"]] = statusCounts[jobData["status"]] + 1
-
-        for typeName, typeCount in typeCounts.items():
-            self.metrics["jobs"]["count"]["type"].labels(job_type=typeName).set(
-                typeCount
+        try:
+            typeCounts = {}
+            jobTypes = list(
+                map(lambda jobName: self.jobMemory[jobName]["type"], self.jobMemory)
             )
 
-        for statusName, statusCount in statusCounts.items():
-            self.metrics["jobs"]["count"]["status"].labels(status=statusName).set(
-                statusCount
+            for jobType in jobTypes:
+                typeCounts[jobType] = 0
+
+            statusCounts = {}
+            jobStatusNames = list(
+                map(lambda jobName: self.jobMemory[jobName]["status"], self.jobMemory)
             )
+
+            for statusName in jobStatusNames:
+                statusCounts[statusName] = 0
+
+            for jobName, jobData in self.jobMemory.items():
+                typeCounts[jobData["type"]] = typeCounts[jobData["type"]] + 1
+                statusCounts[jobData["status"]] = statusCounts[jobData["status"]] + 1
+
+            for typeName, typeCount in typeCounts.items():
+                self.metrics["jobs"]["count"]["type"].labels(job_type=typeName).set(
+                    typeCount
+                )
+
+            for statusName, statusCount in statusCounts.items():
+                self.metrics["jobs"]["count"]["status"].labels(status=statusName).set(
+                    statusCount
+                )
+        except KeyError as error:
+            print(f"poll_screeps_jobs: {error}")

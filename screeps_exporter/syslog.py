@@ -51,8 +51,6 @@ class Syslog(Socket):
             {"color": color, "severity": severity, "module": module, "message": msg}
         )
 
-        print(payload)
-
         match severity:
             case "emergency":
                 self.log.critical(payload)
