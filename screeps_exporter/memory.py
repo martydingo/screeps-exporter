@@ -222,6 +222,7 @@ class Memory:
         self.metrics["structures"] = {}
 
         self.createRoomStorageMetrics()
+        self.createRoomContainersMetrics()
         self.createRoomLabMetrics()
         self.createRoomTerminalMetrics()
         self.createRoomExtensionMetrics()
@@ -499,6 +500,7 @@ class Memory:
         self.pollRoomControllerMetrics()
         self.pollRoomDroppedResourceMetrics()
         self.pollRoomStorageMetrics()
+        self.pollRoomContainersMetrics()
         self.pollRoomLabMetrics()
         self.pollRoomTerminalMetrics()
         self.pollRoomExtensionMetrics()
