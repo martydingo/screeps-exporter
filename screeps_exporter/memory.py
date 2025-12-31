@@ -222,6 +222,8 @@ class Memory:
         self.metrics["structures"] = {}
 
         self.createRoomStorageMetrics()
+        self.createRoomLabMetrics()
+        self.createRoomTerminalMetrics()
         self.createRoomExtensionMetrics()
         self.createRoomLinkMetrics()
 
@@ -251,6 +253,60 @@ class Memory:
                         )
             except KeyError as error:
                 print(f"create_screeps_storage: {error}")
+
+    def createRoomLabMetrics(self):
+        self.metrics["structures"]["labs"] = {}
+        self.metrics["structures"]["labs"]["amount"] = Gauge(
+            "screeps_structures_labs_amount",
+            documentation="Tracks the amount of resources stored within lab for a given room",
+            labelnames=["room", "lab", "resource"],
+        )
+        self.metrics["structures"]["labs"]["capacity"] = Gauge(
+            "screeps_structures_labs_capacity",
+            documentation="Tracks the total capacity of resources that can be stored within lab for a given room",
+            labelnames=["room", "lab", "resource"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                labData = self.roomMemory[roomName]["structures"]["labs"]
+                for labId in labData:
+                    for resource in labData[labId]["resources"]:
+                        self.metrics["structures"]["labs"]["amount"].labels(
+                            room=roomName, lab=labId, resource=resource
+                        )
+                        self.metrics["structures"]["labs"]["capacity"].labels(
+                            room=roomName, lab=labId, resource=resource
+                        )
+            except KeyError as error:
+                print(f"create_screeps_lab: {error}")
+
+    def createRoomTerminalMetrics(self):
+        self.metrics["structures"]["terminal"] = {}
+        self.metrics["structures"]["terminal"]["amount"] = Gauge(
+            "screeps_structures_terminal_amount",
+            documentation="Tracks the amount of resources stored within terminal for a given room",
+            labelnames=["room", "terminal", "resource"],
+        )
+        self.metrics["structures"]["terminal"]["capacity"] = Gauge(
+            "screeps_structures_terminal_capacity",
+            documentation="Tracks the total capacity of resources that can be stored within terminal for a given room",
+            labelnames=["room", "terminal", "resource"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                terminalData = self.roomMemory[roomName]["structures"]["terminal"]
+                for terminalId in terminalData:
+                    for resource in terminalData[terminalId]["resources"]:
+                        self.metrics["structures"]["terminal"]["amount"].labels(
+                            room=roomName, terminal=terminalId, resource=resource
+                        )
+                        self.metrics["structures"]["terminal"]["capacity"].labels(
+                            room=roomName, terminal=terminalId, resource=resource
+                        )
+            except KeyError as error:
+                print(f"create_screeps_terminal: {error}")
 
     def createRoomExtensionMetrics(self):
         self.metrics["structures"]["extensions"] = Gauge(
@@ -299,6 +355,56 @@ class Memory:
 
             except KeyError as error:
                 print(f"create_screeps_structures_links: {error}")
+
+    def createRoomContainersMetrics(self):
+        self.metrics["structures"]["containers"] = {}
+        self.metrics["structures"]["containers"]["hits"] = {}
+        self.metrics["structures"]["containers"]["hits"]["hits"] = Gauge(
+            "screeps_structures_hits_hits",
+            documentation="Tracks the amount of hitpoints of a given container has",
+            labelnames=["room", "container"],
+        )
+        self.metrics["structures"]["containers"]["hits"]["hitsMax"] = Gauge(
+            "screeps_structures_hits_hitsMax",
+            documentation="Tracks the total amount of hitpoints of a given container has",
+            labelnames=["room", "container"],
+        )
+
+        self.metrics["structures"]["containers"]["resources"] = {}
+        self.metrics["structures"]["containers"]["resources"]["amount"] = Gauge(
+            "screeps_structures_containers_amount",
+            documentation="Tracks the amount of resources stored within containers for a given room",
+            labelnames=["room", "container", "resource"],
+        )
+        self.metrics["structures"]["containers"]["resources"]["capacity"] = Gauge(
+            "screeps_structures_containers_capacity",
+            documentation="Tracks the total capacity of resources that can be stored within containers for a given room",
+            labelnames=["room", "container", "resource"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                containersData = self.roomMemory[roomName]["structures"]["containers"]
+                for containerId in containersData:
+                    self.metrics["structures"]["containers"]["hits"]["hits"].labels(
+                        room=roomName, container=containerId
+                    )
+                    self.metrics["structures"]["containers"]["hits"]["hitsMax"].labels(
+                        room=roomName, container=containerId
+                    )
+                    for resource in containersData[containerId]["resources"]:
+                        self.metrics["structures"]["containers"]["resources"][
+                            "amount"
+                        ].labels(
+                            room=roomName, container=containerId, resource=resource
+                        )
+                        self.metrics["structures"]["containers"]["resources"][
+                            "capacity"
+                        ].labels(
+                            room=roomName, container=containerId, resource=resource
+                        )
+            except KeyError as error:
+                print(f"create_screeps_containers: {error}")
 
     def createSpawnMetrics(self):
         self.metrics["spawns"] = {}
@@ -362,16 +468,19 @@ class Memory:
             print(f"create_screeps_jobs: {error}")
 
     def pollMetrics(self):
-        memory = self.pollMemory()
+        try:
+            memory = self.pollMemory()
 
-        self.roomMemory = memory["rooms"]
-        self.spawnMemory = memory["spawns"]
-        self.jobMemory = memory["jobs"]
-        self.creepMemory = memory["creeps"]
-        self.globalMemory = memory["global"]
+            self.roomMemory = memory["rooms"]
+            self.spawnMemory = memory["spawns"]
+            self.jobMemory = memory["jobs"]
+            self.creepMemory = memory["creeps"]
+            self.globalMemory = memory["global"]
 
-        self.pollGlobalGclMetrics()
-        self.pollRoomMetrics()
+            self.pollGlobalGclMetrics()
+            self.pollRoomMetrics()
+        except Exception as error:
+            print(f"pollMetrics: {error}")
 
         sleep(self.config["exporter"]["interval"])
 
@@ -390,6 +499,8 @@ class Memory:
         self.pollRoomControllerMetrics()
         self.pollRoomDroppedResourceMetrics()
         self.pollRoomStorageMetrics()
+        self.pollRoomLabMetrics()
+        self.pollRoomTerminalMetrics()
         self.pollRoomExtensionMetrics()
         self.pollRoomLinkMetrics()
         self.pollSpawnMetrics()
@@ -532,6 +643,38 @@ class Memory:
             except KeyError as error:
                 print(f"poll_screeps_storage: {error}")
 
+    def pollRoomLabMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                labData = self.roomMemory[roomName]["structures"]["labs"]
+                for labId in labData:
+                    for resource in labData[labId]["resources"]:
+                        self.metrics["structures"]["labs"]["amount"].labels(
+                            room=roomName, lab=labId, resource=resource
+                        ).set(labData[labId]["resources"][resource]["amount"])
+                        self.metrics["structures"]["labs"]["capacity"].labels(
+                            room=roomName, lab=labId, resource=resource
+                        )
+            except KeyError as error:
+                print(f"create_screeps_lab: {error}")
+
+    def pollRoomTerminalMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                terminalData = self.roomMemory[roomName]["structures"]["terminal"]
+                for terminalId in terminalData:
+                    for resource in terminalData[terminalId]["resources"]:
+                        self.metrics["structures"]["terminal"]["amount"].labels(
+                            room=roomName, terminal=terminalId, resource=resource
+                        ).set(terminalData[terminalId]["resources"][resource]["amount"])
+                        self.metrics["structures"]["terminal"]["capacity"].labels(
+                            room=roomName, terminal=terminalId, resource=resource
+                        ).set(
+                            terminalData[terminalId]["resources"][resource]["capacity"]
+                        )
+            except KeyError as error:
+                print(f"create_screeps_terminal: {error}")
+
     def pollRoomExtensionMetrics(self):
         for roomName in self.roomMemory:
             try:
@@ -573,6 +716,37 @@ class Memory:
 
             except KeyError as error:
                 print(f"create_screeps_structures_links: {error}")
+
+    def pollRoomContainersMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                containersData = self.roomMemory[roomName]["structures"]["containers"]
+                for containerId in containersData:
+                    self.metrics["structures"]["containers"]["hits"]["hits"].labels(
+                        room=roomName, container=containerId
+                    ).set(containersData[containerId]["hits"]["hits"])
+                    self.metrics["structures"]["containers"]["hits"]["hitsMax"].labels(
+                        room=roomName, container=containerId
+                    ).set(containersData[containerId]["hits"]["hitsMax"])
+                    for resource in containersData[containerId]["resources"]:
+                        self.metrics["structures"]["containers"]["resources"][
+                            "amount"
+                        ].labels(
+                            room=roomName, container=containerId, resource=resource
+                        ).set(
+                            containersData[containerId]["resources"][resource]["amount"]
+                        )
+                        self.metrics["structures"]["containers"]["resources"][
+                            "capacity"
+                        ].labels(
+                            room=roomName, container=containerId, resource=resource
+                        ).set(
+                            containersData[containerId]["resources"][resource][
+                                "capacity"
+                            ]
+                        )
+            except KeyError as error:
+                print(f"create_screeps_containers: {error}")
 
     def pollSpawnMetrics(self):
         try:

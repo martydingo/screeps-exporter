@@ -4,3 +4,5 @@ __pycache__
 config.yml
 poetry.lock
 test.py
+fetchPserverMemory.py
+pserver-mem.json
