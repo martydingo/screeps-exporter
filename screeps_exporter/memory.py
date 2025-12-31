@@ -222,11 +222,12 @@ class Memory:
         self.metrics["structures"] = {}
 
         self.createRoomStorageMetrics()
-        self.createRoomContainersMetrics()
         self.createRoomLabMetrics()
         self.createRoomTerminalMetrics()
         self.createRoomExtensionMetrics()
         self.createRoomLinkMetrics()
+        self.createRoomContainersMetrics()
+        self.createRoomRoadsMetrics()
 
     def createRoomStorageMetrics(self):
         self.metrics["structures"]["storage"] = {}
@@ -407,6 +408,34 @@ class Memory:
             except KeyError as error:
                 print(f"create_screeps_containers: {error}")
 
+    def createRoomRoadsMetrics(self):
+        self.metrics["structures"]["roads"] = {}
+        self.metrics["structures"]["roads"]["hits"] = {}
+        self.metrics["structures"]["roads"]["hits"]["hits"] = Gauge(
+            "screeps_structures_roads_hits_hits",
+            documentation="Tracks the amount of hitpoints of a given road has",
+            labelnames=["room", "road"],
+        )
+        self.metrics["structures"]["roads"]["hits"]["hitsMax"] = Gauge(
+            "screeps_structures_roads_hits_hitsMax",
+            documentation="Tracks the total amount of hitpoints of a given road has",
+            labelnames=["room", "road"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                roadsData = self.roomMemory[roomName]["structures"]["roads"]
+                for roadId in roadsData:
+                    self.metrics["structures"]["roads"]["hits"]["hits"].labels(
+                        room=roomName, road=roadId
+                    )
+                    self.metrics["structures"]["roads"]["hits"]["hitsMax"].labels(
+                        room=roomName, road=roadId
+                    )
+
+            except KeyError as error:
+                print(f"create_screeps_roads: {error}")
+
     def createSpawnMetrics(self):
         self.metrics["spawns"] = {}
         self.metrics["spawns"]["energy"] = {}
@@ -500,11 +529,12 @@ class Memory:
         self.pollRoomControllerMetrics()
         self.pollRoomDroppedResourceMetrics()
         self.pollRoomStorageMetrics()
-        self.pollRoomContainersMetrics()
         self.pollRoomLabMetrics()
         self.pollRoomTerminalMetrics()
         self.pollRoomExtensionMetrics()
         self.pollRoomLinkMetrics()
+        self.pollRoomContainersMetrics()
+        self.pollRoomRoadsMetrics()
         self.pollSpawnMetrics()
         self.pollJobMetrics()
 
@@ -749,6 +779,20 @@ class Memory:
                         )
             except KeyError as error:
                 print(f"create_screeps_containers: {error}")
+
+    def pollRoomRoadsMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                roadsData = self.roomMemory[roomName]["structures"]["roads"]
+                for roadId in roadsData:
+                    self.metrics["structures"]["roads"]["hits"]["hits"].labels(
+                        room=roomName, road=roadId
+                    ).set(roadsData[roadId]["hits"]["hits"])
+                    self.metrics["structures"]["roads"]["hits"]["hitsMax"].labels(
+                        room=roomName, road=roadId
+                    ).set(roadsData[roadId]["hits"]["hitsMax"])
+            except KeyError as error:
+                print(f"poll_screeps_structures_roads: {error}")
 
     def pollSpawnMetrics(self):
         try:
