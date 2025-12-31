@@ -411,13 +411,13 @@ class Memory:
     def createRoomRoadsMetrics(self):
         self.metrics["structures"]["roads"] = {}
         self.metrics["structures"]["roads"]["hits"] = {}
-        self.metrics["structures"]["roads"]["hits"]["hits"] = Gauge(
-            "screeps_structures_roads_hits_hits",
+        self.metrics["structures"]["roads"]["hits"]["current"] = Gauge(
+            "screeps_structures_roads_hits_current",
             documentation="Tracks the amount of hitpoints of a given road has",
             labelnames=["room", "road"],
         )
-        self.metrics["structures"]["roads"]["hits"]["hitsMax"] = Gauge(
-            "screeps_structures_roads_hits_hitsMax",
+        self.metrics["structures"]["roads"]["hits"]["total"] = Gauge(
+            "screeps_structures_roads_hits_total",
             documentation="Tracks the total amount of hitpoints of a given road has",
             labelnames=["room", "road"],
         )
@@ -426,10 +426,10 @@ class Memory:
             try:
                 roadsData = self.roomMemory[roomName]["structures"]["roads"]
                 for roadId in roadsData:
-                    self.metrics["structures"]["roads"]["hits"]["hits"].labels(
+                    self.metrics["structures"]["roads"]["hits"]["current"].labels(
                         room=roomName, road=roadId
                     )
-                    self.metrics["structures"]["roads"]["hits"]["hitsMax"].labels(
+                    self.metrics["structures"]["roads"]["hits"]["total"].labels(
                         room=roomName, road=roadId
                     )
 
@@ -785,12 +785,12 @@ class Memory:
             try:
                 roadsData = self.roomMemory[roomName]["structures"]["roads"]
                 for roadId in roadsData:
-                    self.metrics["structures"]["roads"]["hits"]["hits"].labels(
+                    self.metrics["structures"]["roads"]["hits"]["current"].labels(
                         room=roomName, road=roadId
-                    ).set(roadsData[roadId]["hits"]["hits"])
-                    self.metrics["structures"]["roads"]["hits"]["hitsMax"].labels(
+                    ).set(roadsData[roadId]["hits"]["current"])
+                    self.metrics["structures"]["roads"]["hits"]["total"].labels(
                         room=roomName, road=roadId
-                    ).set(roadsData[roadId]["hits"]["hitsMax"])
+                    ).set(roadsData[roadId]["hits"]["total"])
             except KeyError as error:
                 print(f"poll_screeps_structures_roads: {error}")
 
