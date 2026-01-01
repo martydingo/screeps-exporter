@@ -1,4 +1,4 @@
-from prometheus_client import Gauge, Enum, start_http_server
+from prometheus_client import Gauge, Enum, Info, start_http_server
 from time import sleep
 
 
@@ -128,70 +128,86 @@ class Memory:
     def createRoomControllerMetrics(self):
         self.metrics["controllers"] = {}
 
+        self.metrics["controllers"]["owner"] = {}
+        self.metrics["controllers"]["owner"]["my"] = Enum(
+            "screeps_controllers_owner_my",
+            documentation="Whether the room is currently claimed by us",
+            labelnames=["room", "controller", "owner"],
+            states=["True", "False"],
+        )
+
         self.metrics["controllers"]["upgrade"] = {}
         self.metrics["controllers"]["upgrade"]["progress"] = Gauge(
             "screeps_controllers_upgrade_progress",
             documentation="The amount of energy invested in the room controller to upgrade the room control level",
-            labelnames=["room", "controller"],
+            labelnames=["room", "controller", "owner"],
         )
         self.metrics["controllers"]["upgrade"]["nextLevel"] = Gauge(
             "screeps_controllers_upgrade_next_level",
             documentation="The amount of energy required to upgrade the room control level to the next level",
-            labelnames=["room", "controller"],
+            labelnames=["room", "controller", "owner"],
         )
 
         self.metrics["controllers"]["safeMode"] = {}
         self.metrics["controllers"]["safeMode"]["active"] = Enum(
             "screeps_controllers_safe_mode_active",
             documentation="Whether safe mode is currently active for a given room",
-            labelnames=["room", "controller"],
+            labelnames=["room", "controller", "owner"],
             states=["active", "inactive"],
         )
         self.metrics["controllers"]["safeMode"]["available"] = Gauge(
             "screeps_controllers_safe_mode_next_available",
             documentation="How many safe modes currently remain for a given room",
-            labelnames=["room", "controller"],
+            labelnames=["room", "controller", "owner"],
         )
         self.metrics["controllers"]["safeMode"]["timeLeft"] = Gauge(
             "screeps_controllers_safe_mode_time_left",
             documentation="The duration of time before safe mode deactivates for a given room",
-            labelnames=["room", "controller"],
+            labelnames=["room", "controller", "owner"],
         )
         self.metrics["controllers"]["downgrade"] = Gauge(
             "screeps_controllers_downgrade",
             documentation="The amount of ticks remaining before the room level decrements",
-            labelnames=["room", "controller"],
+            labelnames=["room", "controller", "owner"],
         )
         self.metrics["controllers"]["level"] = Gauge(
             "screeps_controllers_level",
             documentation="The current room control level",
-            labelnames=["room", "controller"],
+            labelnames=["room", "controller", "owner"],
         )
 
         for roomName in self.roomMemory:
             try:
                 controllerData = self.roomMemory[roomName]["controller"]
                 for controllerId in controllerData:
+                    username = controllerData[controllerId]["owner"]["username"]
+
+                    self.metrics["controllers"]["owner"]["username"].labels(
+                        room=roomName, controller=controllerId, owner=username
+                    )
+                    self.metrics["controllers"]["owner"]["my"].labels(
+                        room=roomName, controller=controllerId, owner=username
+                    )
                     self.metrics["controllers"]["upgrade"]["progress"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     )
                     self.metrics["controllers"]["upgrade"]["nextLevel"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     )
                     self.metrics["controllers"]["safeMode"]["active"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     )
                     self.metrics["controllers"]["safeMode"]["available"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     )
                     self.metrics["controllers"]["safeMode"]["timeLeft"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     )
                     self.metrics["controllers"]["downgrade"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     )
                     self.metrics["controllers"]["level"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     )
 
             except KeyError as error:
@@ -577,12 +593,17 @@ class Memory:
             try:
                 controllerData = self.roomMemory[roomName]["controller"]
                 for controllerId in controllerData:
+                    username = controllerData[controllerId]["owner"]["username"]
+
+                    self.metrics["controllers"]["owner"]["my"].labels(
+                        room=roomName, controller=controllerId, owner=username
+                    ).state(str(controllerData[controllerId]["owner"]["my"]))
                     self.metrics["controllers"]["upgrade"]["progress"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     ).set(controllerData[controllerId]["upgrade"]["progress"])
 
                     self.metrics["controllers"]["upgrade"]["nextLevel"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     ).set(controllerData[controllerId]["upgrade"]["nextLevel"])
 
                     if controllerData[controllerId]["safeMode"]["active"] == True:
@@ -591,28 +612,28 @@ class Memory:
                         safeModeState = "inactive"
 
                     self.metrics["controllers"]["safeMode"]["active"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     ).state(safeModeState)
 
                     self.metrics["controllers"]["safeMode"]["available"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     ).set(controllerData[controllerId]["safeMode"]["available"])
 
                     try:
                         self.metrics["controllers"]["safeMode"]["timeLeft"].labels(
-                            room=roomName, controller=controllerId
+                            room=roomName, controller=controllerId, owner=username
                         ).set(controllerData[controllerId]["safeMode"]["timeLeft"])
                     except KeyError:
                         self.metrics["controllers"]["safeMode"]["timeLeft"].labels(
-                            room=roomName, controller=controllerId
+                            room=roomName, controller=controllerId, owner=username
                         ).set(0)
 
                     self.metrics["controllers"]["downgrade"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     ).set(controllerData[controllerId]["downgrade"])
 
                     self.metrics["controllers"]["level"].labels(
-                        room=roomName, controller=controllerId
+                        room=roomName, controller=controllerId, owner=username
                     ).set(controllerData[controllerId]["level"])
 
             except KeyError as error:
