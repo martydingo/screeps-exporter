@@ -686,7 +686,7 @@ class Memory:
                         ).set(labData[labId]["resources"][resource]["amount"])
                         self.metrics["structures"]["labs"]["capacity"].labels(
                             room=roomName, lab=labId, resource=resource
-                        )
+                        ).set(labData[labId]["resources"][resource]["capacity"])
             except KeyError as error:
                 print(f"create_screeps_lab: {error}")
 
