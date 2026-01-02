@@ -49,6 +49,7 @@ class Memory:
     def createGlobalMetrics(self):
         self.metrics["global"] = {}
         self.createGlobalGclMetrics()
+        self.createGlobalCpuMetrics()
 
     def createGlobalGclMetrics(self):
         self.metrics["global"]["gcl"] = {}
@@ -65,6 +66,17 @@ class Memory:
             documentation="The total progress required to progress to the next global control level",
         )
         # self.metrics[""]
+
+    def createGlobalCpuMetrics(self):
+        self.metrics["global"]["cpu"] = {}
+        self.metrics["global"]["cpu"]["current"] = Gauge(
+            "screeps_global_cpu_current",
+            documentation="The current CPU usage the player is using",
+        )
+        self.metrics["global"]["cpu"]["bucket"] = Gauge(
+            "screeps_global_cpu_bucket",
+            documentation="The amount of CPU within the bucket left remaining",
+        )
 
     def createRoomEnergyMetrics(self):
         self.metrics["energy"] = {}
@@ -615,6 +627,7 @@ class Memory:
             self.globalMemory = memory["global"]
 
             self.pollGlobalGclMetrics()
+            self.pollGlobalCpuMetrics()
             self.pollRoomMetrics()
             self.pollSpawnMetrics()
             self.pollJobMetrics()
@@ -631,6 +644,12 @@ class Memory:
         self.metrics["global"]["gcl"]["nextLevel"].set(
             self.globalMemory["gcl"]["nextLevel"]
         )
+
+    def pollGlobalCpuMetrics(self):
+        self.metrics["global"]["cpu"]["current"].set(
+            self.globalMemory["cpu"]["current"]
+        )
+        self.metrics["global"]["cpu"]["bucket"].set(self.globalMemory["cpu"]["bucket"])
 
     def pollRoomMetrics(self):
         self.pollRoomEnergyMetrics()
