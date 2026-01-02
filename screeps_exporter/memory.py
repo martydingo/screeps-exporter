@@ -36,6 +36,8 @@ class Memory:
 
         self.createGlobalMetrics()
         self.createRoomMetrics()
+        self.createSpawnMetrics()
+        self.createJobMetrics()
 
     def createRoomMetrics(self):
         self.createRoomEnergyMetrics()
@@ -43,8 +45,6 @@ class Memory:
         self.createRoomControllerMetrics()
         self.createRoomDroppedResourceMetrics()
         self.createRoomStructureMetrics()
-        self.createSpawnMetrics()
-        self.createJobMetrics()
 
     def createGlobalMetrics(self):
         self.metrics["global"] = {}
@@ -243,7 +243,9 @@ class Memory:
         self.createRoomExtensionMetrics()
         self.createRoomLinkMetrics()
         self.createRoomContainersMetrics()
+        self.createRoomTowersMetrics()
         self.createRoomRoadsMetrics()
+        self.createRoomExtractorsMetrics()
 
     def createRoomStorageMetrics(self):
         self.metrics["structures"]["storage"] = {}
@@ -424,6 +426,51 @@ class Memory:
             except KeyError as error:
                 print(f"create_screeps_containers: {error}")
 
+    def createRoomTowersMetrics(self):
+        self.metrics["structures"]["towers"] = {}
+        self.metrics["structures"]["towers"]["hits"] = {}
+        self.metrics["structures"]["towers"]["hits"]["current"] = Gauge(
+            "screeps_structures_hits_current",
+            documentation="Tracks the amount of hitpoints a given tower has",
+            labelnames=["room", "tower"],
+        )
+        self.metrics["structures"]["towers"]["hits"]["total"] = Gauge(
+            "screeps_structures_hits_total",
+            documentation="Tracks the total amount of hitpoints a given tower has",
+            labelnames=["room", "tower"],
+        )
+
+        self.metrics["structures"]["towers"]["energy"] = {}
+        self.metrics["structures"]["towers"]["energy"]["amount"] = Gauge(
+            "screeps_structures_towers_energy_amount",
+            documentation="Tracks the amount of energy stored within a given tower",
+            labelnames=["room", "tower"],
+        )
+        self.metrics["structures"]["towers"]["energy"]["capacity"] = Gauge(
+            "screeps_structures_towers_energy_capacity",
+            documentation="Tracks the total capacity of resources that can be stored within a given tower",
+            labelnames=["room", "tower"],
+        )
+
+        for roomName in self.roomMemory:
+            try:
+                towersData = self.roomMemory[roomName]["structures"]["towers"]
+                for towerId in towersData:
+                    self.metrics["structures"]["towers"]["hits"]["current"].labels(
+                        room=roomName, tower=towerId
+                    )
+                    self.metrics["structures"]["towers"]["hits"]["total"].labels(
+                        room=roomName, tower=towerId
+                    )
+                    self.metrics["structures"]["towers"]["energy"]["amount"].labels(
+                        room=roomName, tower=towerId
+                    )
+                    self.metrics["structures"]["towers"]["energy"]["capacity"].labels(
+                        room=roomName, tower=towerId
+                    )
+            except KeyError as error:
+                print(f"create_screeps_towers: {error}")
+
     def createRoomRoadsMetrics(self):
         self.metrics["structures"]["roads"] = {}
         self.metrics["structures"]["roads"]["hits"] = {}
@@ -451,6 +498,50 @@ class Memory:
 
             except KeyError as error:
                 print(f"create_screeps_roads: {error}")
+
+    def createRoomExtractorsMetrics(self):
+        self.metrics["structures"]["extractors"] = {}
+        self.metrics["structures"]["extractors"]["mineral"] = {}
+        self.metrics["structures"]["extractors"]["mineral"]["amount"] = Gauge(
+            "screeps_structures_extractors_mineral_amount",
+            documentation="Tracks the amount of the mineral a given extractor is installed on",
+            labelnames=["room", "extractor", "mineral"],
+        )
+        self.metrics["structures"]["extractors"]["mineral"]["density"] = Gauge(
+            "screeps_structures_extractors_mineral_density",
+            documentation="Tracks the density of the mineral a given extractor is installed on",
+            labelnames=["room", "extractor", "mineral"],
+        )
+        self.metrics["structures"]["extractors"]["mineral"]["regen"] = Gauge(
+            "screeps_structures_extractors_mineral_regen",
+            documentation="Tracks the regeneration timer of the mineral a given extractor is installed on",
+            labelnames=["room", "extractor", "mineral"],
+        )
+        self.metrics["structures"]["extractors"]["cooldown"] = Gauge(
+            "screeps_structures_extractors_cooldown",
+            documentation="Tracks the amount of a mineral a given extractor has",
+            labelnames=["room", "extractor", "mineral"],
+        )
+        for roomName in self.roomMemory:
+            try:
+                extractorsData = self.roomMemory[roomName]["structures"]["extractor"]
+                for extractorId in extractorsData:
+                    mineral = extractorsData[extractorId]["mineral"]["type"]
+                    print(mineral)
+                    self.metrics["structures"]["extractors"]["mineral"][
+                        "amount"
+                    ].labels(room=roomName, extractor=extractorId, mineral=mineral)
+                    self.metrics["structures"]["extractors"]["mineral"][
+                        "density"
+                    ].labels(room=roomName, extractor=extractorId, mineral=mineral)
+                    self.metrics["structures"]["extractors"]["mineral"]["regen"].labels(
+                        room=roomName, extractor=extractorId, mineral=mineral
+                    )
+                    self.metrics["structures"]["extractors"]["cooldown"].labels(
+                        room=roomName, extractor=extractorId, mineral=mineral
+                    )
+            except KeyError as error:
+                print(f"create_screeps_extractors: {error}")
 
     def createSpawnMetrics(self):
         self.metrics["spawns"] = {}
@@ -525,6 +616,8 @@ class Memory:
 
             self.pollGlobalGclMetrics()
             self.pollRoomMetrics()
+            self.pollSpawnMetrics()
+            self.pollJobMetrics()
         except Exception as error:
             print(f"pollMetrics: {error}")
 
@@ -550,9 +643,9 @@ class Memory:
         self.pollRoomExtensionMetrics()
         self.pollRoomLinkMetrics()
         self.pollRoomContainersMetrics()
+        self.pollRoomTowersMetrics()
         self.pollRoomRoadsMetrics()
-        self.pollSpawnMetrics()
-        self.pollJobMetrics()
+        self.pollRoomExtractorsMetrics()
 
     def pollRoomEnergyMetrics(self):
         for roomName in self.roomMemory:
@@ -801,6 +894,26 @@ class Memory:
             except KeyError as error:
                 print(f"create_screeps_containers: {error}")
 
+    def pollRoomTowersMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                towersData = self.roomMemory[roomName]["structures"]["towers"]
+                for towerId in towersData:
+                    self.metrics["structures"]["towers"]["hits"]["current"].labels(
+                        room=roomName, tower=towerId
+                    ).set(towersData[towerId]["hits"]["current"])
+                    self.metrics["structures"]["towers"]["hits"]["total"].labels(
+                        room=roomName, tower=towerId
+                    ).set(towersData[towerId]["hits"]["total"])
+                    self.metrics["structures"]["towers"]["energy"]["amount"].labels(
+                        room=roomName, tower=towerId
+                    ).set(towersData[towerId]["energy"]["amount"])
+                    self.metrics["structures"]["towers"]["energy"]["capacity"].labels(
+                        room=roomName, tower=towerId
+                    ).set(towersData[towerId]["energy"]["capacity"])
+            except KeyError as error:
+                print(f"create_screeps_towers: {error}")
+
     def pollRoomRoadsMetrics(self):
         for roomName in self.roomMemory:
             try:
@@ -814,6 +927,32 @@ class Memory:
                     ).set(roadsData[roadId]["hits"]["total"])
             except KeyError as error:
                 print(f"poll_screeps_structures_roads: {error}")
+
+    def pollRoomExtractorsMetrics(self):
+        for roomName in self.roomMemory:
+            try:
+                extractorsData = self.roomMemory[roomName]["structures"]["extractor"]
+                for extractorId in extractorsData:
+                    mineral = extractorsData[extractorId]["mineral"]["type"]
+                    print(mineral)
+                    self.metrics["structures"]["extractors"]["mineral"][
+                        "amount"
+                    ].labels(room=roomName, extractor=extractorId, mineral=mineral).set(
+                        extractorsData[extractorId]["mineral"]["amount"]
+                    )
+                    self.metrics["structures"]["extractors"]["mineral"][
+                        "density"
+                    ].labels(room=roomName, extractor=extractorId, mineral=mineral).set(
+                        extractorsData[extractorId]["mineral"]["density"]
+                    )
+                    self.metrics["structures"]["extractors"]["mineral"]["regen"].labels(
+                        room=roomName, extractor=extractorId, mineral=mineral
+                    ).set(extractorsData[extractorId]["mineral"]["regeneration"])
+                    self.metrics["structures"]["extractors"]["cooldown"].labels(
+                        room=roomName, extractor=extractorId, mineral=mineral
+                    ).set(extractorsData[extractorId]["cooldown"])
+            except KeyError as error:
+                print(f"create_screeps_extractors: {error}")
 
     def pollSpawnMetrics(self):
         try:
