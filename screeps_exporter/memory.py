@@ -543,7 +543,6 @@ class Memory:
                 extractorsData = self.roomMemory[roomName]["structures"]["extractor"]
                 for extractorId in extractorsData:
                     mineral = extractorsData[extractorId]["mineral"]["type"]
-                    print(mineral)
                     self.metrics["structures"]["extractors"]["mineral"][
                         "amount"
                     ].labels(room=roomName, extractor=extractorId, mineral=mineral)
@@ -987,7 +986,6 @@ class Memory:
                 extractorsData = self.roomMemory[roomName]["structures"]["extractor"]
                 for extractorId in extractorsData:
                     mineral = extractorsData[extractorId]["mineral"]["type"]
-                    print(mineral)
                     self.metrics["structures"]["extractors"]["mineral"][
                         "amount"
                     ].labels(room=roomName, extractor=extractorId, mineral=mineral).set(
