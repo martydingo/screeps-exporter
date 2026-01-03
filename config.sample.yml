@@ -5,6 +5,7 @@ screeps:
   shard: shard3
 exporter:
   interval: 10
+  monitorProfiler: false
 syslog:
   enabled: false
   address: 1.2.3.4
