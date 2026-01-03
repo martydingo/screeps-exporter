@@ -39,6 +39,10 @@ class Memory:
         self.createSpawnMetrics()
         self.createJobMetrics()
 
+        if self.config["exporter"]["monitorProfiler"] == True:
+            self.profilerMemory = memory["profiler"]
+            self.createProfilerMetrics()
+
     def createRoomMetrics(self):
         self.createRoomEnergyMetrics()
         self.createRoomSourceMetrics()
@@ -616,6 +620,34 @@ class Memory:
         except KeyError as error:
             print(f"create_screeps_jobs: {error}")
 
+    def createProfilerMetrics(self):
+        self.metrics["profiler"] = {}
+
+        self.createProfilerClassMetrics()
+
+    def createProfilerClassMetrics(self):
+        self.metrics["profiler"]["class"] = {}
+        self.metrics["profiler"]["class"]["start"] = Gauge(
+            "screeps_profiler_class_start",
+            documentation="Tracks the start usage of CPU for the given class",
+            labelnames=["className"],
+        )
+        self.metrics["profiler"]["class"]["end"] = Gauge(
+            "screeps_profiler_class_end",
+            documentation="Tracks the end usage of CPU for the given class",
+            labelnames=["className"],
+        )
+        self.metrics["profiler"]["class"]["total"] = Gauge(
+            "screeps_profiler_class_total",
+            documentation="Tracks the total usage of CPU for the given class",
+            labelnames=["className"],
+        )
+
+        for className in self.profilerMemory["class"]:
+            self.metrics["profiler"]["class"]["start"].labels(className=className)
+            self.metrics["profiler"]["class"]["end"].labels(className=className)
+            self.metrics["profiler"]["class"]["total"].labels(className=className)
+
     def pollMetrics(self):
         try:
             memory = self.pollMemory()
@@ -631,6 +663,8 @@ class Memory:
             self.pollRoomMetrics()
             self.pollSpawnMetrics()
             self.pollJobMetrics()
+            if self.config["exporter"]["monitorProfiler"] == True:
+                self.pollProfilerMetrics()
         except Exception as error:
             print(f"pollMetrics: {error}")
 
@@ -1029,3 +1063,18 @@ class Memory:
                 )
         except KeyError as error:
             print(f"poll_screeps_jobs: {error}")
+
+    def pollProfilerMetrics(self):
+        self.pollProfilerClassMetrics()
+
+    def pollProfilerClassMetrics(self):
+        for className in self.profilerMemory["class"]:
+            self.metrics["profiler"]["class"]["start"].labels(className=className).set(
+                self.profilerMemory["class"][className]["start"]
+            )
+            self.metrics["profiler"]["class"]["end"].labels(className=className).set(
+                self.profilerMemory["class"][className]["end"]
+            )
+            self.metrics["profiler"]["class"]["total"].labels(className=className).set(
+                self.profilerMemory["class"][className]["total"]
+            )
