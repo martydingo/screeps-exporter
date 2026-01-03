@@ -623,6 +623,7 @@ class Memory:
         self.metrics["profiler"] = {}
 
         self.createProfilerClassMetrics()
+        self.createProfilerMethodMetrics()
 
     def createProfilerClassMetrics(self):
         self.metrics["profiler"]["class"] = {}
@@ -647,7 +648,39 @@ class Memory:
                 self.metrics["profiler"]["class"]["end"].labels(className=className)
                 self.metrics["profiler"]["class"]["total"].labels(className=className)
         except KeyError as error:
-            print(f"poll_screeps_profiler_class: {error}")
+            print(f"create_screeps_profiler_class: {error}")
+
+    def createProfilerMethodMetrics(self):
+        self.metrics["profiler"]["method"] = {}
+        self.metrics["profiler"]["method"]["start"] = Gauge(
+            "screeps_profiler_method_start",
+            documentation="Tracks the start usage of CPU for the given execution of a method",
+            labelnames=["methodName", "call"],
+        )
+        self.metrics["profiler"]["method"]["end"] = Gauge(
+            "screeps_profiler_method_end",
+            documentation="Tracks the end usage of CPU for the given execution of a method",
+            labelnames=["methodName", "call"],
+        )
+        self.metrics["profiler"]["method"]["total"] = Gauge(
+            "screeps_profiler_method_total",
+            documentation="Tracks the total usage of CPU for the given execution of a method",
+            labelnames=["methodName", "call"],
+        )
+        try:
+            for methodName in self.profilerMemory["method"]:
+                for call in self.profilerMemory["method"][methodName]:
+                    self.metrics["profiler"]["method"]["start"].labels(
+                        methodName=methodName, call=call
+                    )
+                    self.metrics["profiler"]["method"]["end"].labels(
+                        methodName=methodName, call=call
+                    )
+                    self.metrics["profiler"]["method"]["total"].labels(
+                        methodName=methodName, call=call
+                    )
+        except KeyError as error:
+            print(f"create_screeps_profiler_method: {error}")
 
     def pollMetrics(self):
         try:
@@ -1067,6 +1100,7 @@ class Memory:
 
     def pollProfilerMetrics(self):
         self.pollProfilerClassMetrics()
+        self.pollProfilerMethodMetrics()
 
     def pollProfilerClassMetrics(self):
         try:
@@ -1082,3 +1116,33 @@ class Memory:
                 ).set(self.profilerMemory["class"][className]["total"])
         except KeyError as error:
             print(f"poll_screeps_profiler_class: {error}")
+
+    def pollProfilerMethodMetrics(self):
+        profilerMethodLabels = set()
+        try:
+            for methodName in self.profilerMemory["method"]:
+                for call in self.profilerMemory["method"][methodName]:
+                    labels = (
+                        methodName,
+                        call,
+                    )
+                    profilerMethodLabels.add(labels)
+                    self.metrics["profiler"]["method"]["start"].labels(
+                        methodName=methodName, call=call
+                    ).set(self.profilerMemory["method"][methodName][call]["start"])
+                    self.metrics["profiler"]["method"]["end"].labels(
+                        methodName=methodName, call=call
+                    ).set(self.profilerMemory["method"][methodName][call]["end"])
+                    self.metrics["profiler"]["method"]["total"].labels(
+                        methodName=methodName, call=call
+                    ).set(self.profilerMemory["method"][methodName][call]["total"])
+        except KeyError as error:
+            print(f"poll_screeps_profiler_method: {error}")
+        try:
+            for metricName in self.metrics["profiler"]["method"]:
+                metric = self.metrics["profiler"]["method"][metricName]
+                for labels in list(metric._metrics.keys()):
+                    if labels not in profilerMethodLabels:
+                        metric.remove(*labels)
+        except KeyError as error:
+            print(f"cleanup_screeps_profiler_method: {error}")
