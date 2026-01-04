@@ -30,6 +30,7 @@ class Memory:
 
         self.roomMemory = memory["rooms"]
         self.spawnMemory = memory["spawns"]
+        self.spawnHeldMemory = memory["spawnHeld"]
         self.jobMemory = memory["jobs"]
         self.creepMemory = memory["creeps"]
         self.globalMemory = memory["global"]
@@ -37,6 +38,7 @@ class Memory:
         self.createGlobalMetrics()
         self.createRoomMetrics()
         self.createSpawnMetrics()
+        self.createSpawnHeldMetrics()
         self.createJobMetrics()
 
         if self.config["exporter"]["monitorProfiler"] == True:
@@ -54,6 +56,7 @@ class Memory:
         self.metrics["global"] = {}
         self.createGlobalGclMetrics()
         self.createGlobalCpuMetrics()
+        self.createGlobalTimeMetrics()
 
     def createGlobalGclMetrics(self):
         self.metrics["global"]["gcl"] = {}
@@ -80,6 +83,12 @@ class Memory:
         self.metrics["global"]["cpu"]["bucket"] = Gauge(
             "screeps_global_cpu_bucket",
             documentation="The amount of CPU within the bucket left remaining",
+        )
+
+    def createGlobalTimeMetrics(self):
+        self.metrics["global"]["time"] = Gauge(
+            "screeps_global_time",
+            documentation="How many ticks have passed since the creation of the shard",
         )
 
     def createRoomEnergyMetrics(self):
@@ -587,6 +596,16 @@ class Memory:
         except KeyError as error:
             print(f"create_screeps_spawns: {error}")
 
+    def createSpawnHeldMetrics(self):
+        self.metrics["spawnHeld"] = Gauge(
+            "screeps_spawns_spawn_held",
+            documentation="Tracks the time since spawns have been held from spawning due to the room energy level being under the room energy capacity",
+            labelnames=["room"],
+        )
+
+        for room in self.spawnHeldMemory:
+            self.metrics["spawnHeld"].labels(room=room)
+
     def createJobMetrics(self):
         self.metrics["jobs"] = {}
         self.metrics["jobs"]["count"] = {}
@@ -688,6 +707,7 @@ class Memory:
 
             self.roomMemory = memory["rooms"]
             self.spawnMemory = memory["spawns"]
+            self.spawnHeldMemory = memory["spawnHeld"]
             self.jobMemory = memory["jobs"]
             self.creepMemory = memory["creeps"]
             self.globalMemory = memory["global"]
@@ -695,8 +715,11 @@ class Memory:
 
             self.pollGlobalGclMetrics()
             self.pollGlobalCpuMetrics()
+            self.pollGlobalTimeMetrics()
+
             self.pollRoomMetrics()
             self.pollSpawnMetrics()
+            self.pollSpawnHeldMetrics()
             self.pollJobMetrics()
             if self.config["exporter"]["monitorProfiler"] == True:
                 self.pollProfilerMetrics()
@@ -719,6 +742,9 @@ class Memory:
             self.globalMemory["cpu"]["current"]
         )
         self.metrics["global"]["cpu"]["bucket"].set(self.globalMemory["cpu"]["bucket"])
+
+    def pollGlobalTimeMetrics(self):
+        self.metrics["global"]["time"].set(self.globalMemory["time"])
 
     def pollRoomMetrics(self):
         self.pollRoomEnergyMetrics()
@@ -1021,7 +1047,7 @@ class Memory:
                 print(f"poll_screeps_structures_roads: {error}")
 
         for metricName in self.metrics["structures"]["roads"]["hits"]:
-            metric = self.metrics["droppedResources"][metricName]
+            metric = self.metrics["structures"]["roads"]["hits"][metricName]
             for labels in list(metric._metrics.keys()):
                 if labels not in roomRoadLabels:
                     metric.remove(*labels)
@@ -1073,6 +1099,23 @@ class Memory:
 
         except KeyError as error:
             print(f"poll_screeps_spawns: {error}")
+
+    def pollSpawnHeldMetrics(self):
+        try:
+            spawnHeldLabels = set()
+
+            for room in self.spawnHeldMemory:
+                spawnHeldLabels.add((room,))
+                self.metrics["spawnHeld"].labels(room=room).set(
+                    self.spawnHeldMemory[room]
+                )
+
+            metric = self.metrics["spawnHeld"]
+            for labels in list(metric._metrics.keys()):
+                if labels not in spawnHeldLabels:
+                    metric.remove(*labels)
+        except KeyError as error:
+            print(f"poll_screeps_spawns_spawn_held: {error}")
 
     def pollJobMetrics(self):
         try:
