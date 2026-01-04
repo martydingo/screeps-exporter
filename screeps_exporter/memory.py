@@ -1003,10 +1003,14 @@ class Memory:
                 print(f"poll_screeps_towers: {error}")
 
     def pollRoomRoadsMetrics(self):
+        roomRoadLabels = set()
         for roomName in self.roomMemory:
             try:
                 roadsData = self.roomMemory[roomName]["structures"]["roads"]
                 for roadId in roadsData:
+                    labels = (roomName, roadId)
+                    roomRoadLabels.add(labels)
+
                     self.metrics["structures"]["roads"]["hits"]["current"].labels(
                         room=roomName, road=roadId
                     ).set(roadsData[roadId]["hits"]["current"])
@@ -1015,6 +1019,12 @@ class Memory:
                     ).set(roadsData[roadId]["hits"]["total"])
             except KeyError as error:
                 print(f"poll_screeps_structures_roads: {error}")
+
+        for metricName in self.metrics["structures"]["roads"]["hits"]:
+            metric = self.metrics["droppedResources"][metricName]
+            for labels in list(metric._metrics.keys()):
+                if labels not in roomRoadLabels:
+                    metric.remove(*labels)
 
     def pollRoomExtractorsMetrics(self):
         for roomName in self.roomMemory:
@@ -1082,7 +1092,7 @@ class Memory:
             for statusName in jobStatusNames:
                 statusCounts[statusName] = 0
 
-            for jobName, jobData in self.jobMemory.items():
+            for jobData in self.jobMemory:
                 typeCounts[jobData["type"]] = typeCounts[jobData["type"]] + 1
                 statusCounts[jobData["status"]] = statusCounts[jobData["status"]] + 1
 
@@ -1091,7 +1101,9 @@ class Memory:
                     typeCount
                 )
 
+            labels = set()
             for statusName, statusCount in statusCounts.items():
+                labels
                 self.metrics["jobs"]["count"]["status"].labels(status=statusName).set(
                     statusCount
                 )
