@@ -671,33 +671,30 @@ class Memory:
 
     def createProfilerMethodMetrics(self):
         self.metrics["profiler"]["method"] = {}
-        self.metrics["profiler"]["method"]["start"] = Gauge(
-            "screeps_profiler_method_start",
-            documentation="Tracks the start usage of CPU for the given execution of a method",
-            labelnames=["methodName", "call"],
-        )
-        self.metrics["profiler"]["method"]["end"] = Gauge(
-            "screeps_profiler_method_end",
-            documentation="Tracks the end usage of CPU for the given execution of a method",
-            labelnames=["methodName", "call"],
-        )
         self.metrics["profiler"]["method"]["total"] = Gauge(
             "screeps_profiler_method_total",
-            documentation="Tracks the total usage of CPU for the given execution of a method",
-            labelnames=["methodName", "call"],
+            documentation="Tracks the total usage of CPU for the executions of a given method",
+            labelnames=["methodName"],
+        )
+        self.metrics["profiler"]["method"]["max"] = Gauge(
+            "screeps_profiler_method_max",
+            documentation="Tracks the peakusage of CPU a method has consumed",
+            labelnames=["methodName"],
+        )
+        self.metrics["profiler"]["method"]["calls"] = Gauge(
+            "screeps_profiler_method_calls",
+            documentation="Tracks the number of times a method has been executed",
+            labelnames=["methodName"],
         )
         try:
             for methodName in self.profilerMemory["method"]:
-                for call in self.profilerMemory["method"][methodName]:
-                    self.metrics["profiler"]["method"]["start"].labels(
-                        methodName=methodName, call=call
-                    )
-                    self.metrics["profiler"]["method"]["end"].labels(
-                        methodName=methodName, call=call
-                    )
-                    self.metrics["profiler"]["method"]["total"].labels(
-                        methodName=methodName, call=call
-                    )
+                self.metrics["profiler"]["method"]["total"].labels(
+                    methodName=methodName
+                )
+                self.metrics["profiler"]["method"]["max"].labels(methodName=methodName)
+                self.metrics["profiler"]["method"]["calls"].labels(
+                    methodName=methodName
+                )
         except KeyError as error:
             print(f"create_screeps_profiler_method: {error}")
 
@@ -1176,21 +1173,17 @@ class Memory:
         profilerMethodLabels = set()
         try:
             for methodName in self.profilerMemory["method"]:
-                for call in self.profilerMemory["method"][methodName]:
-                    labels = (
-                        methodName,
-                        call,
-                    )
-                    profilerMethodLabels.add(labels)
-                    self.metrics["profiler"]["method"]["start"].labels(
-                        methodName=methodName, call=call
-                    ).set(self.profilerMemory["method"][methodName][call]["start"])
-                    self.metrics["profiler"]["method"]["end"].labels(
-                        methodName=methodName, call=call
-                    ).set(self.profilerMemory["method"][methodName][call]["end"])
-                    self.metrics["profiler"]["method"]["total"].labels(
-                        methodName=methodName, call=call
-                    ).set(self.profilerMemory["method"][methodName][call]["total"])
+                profilerMethodLabels.add((methodName,))
+                self.metrics["profiler"]["method"]["total"].labels(
+                    methodName=methodName
+                ).set(self.profilerMemory["method"][methodName]["total"])
+                self.metrics["profiler"]["method"]["max"].labels(
+                    methodName=methodName
+                ).set(self.profilerMemory["method"][methodName]["max"])
+                self.metrics["profiler"]["method"]["calls"].labels(
+                    methodName=methodName
+                ).set(self.profilerMemory["method"][methodName]["calls"])
+
         except KeyError as error:
             print(f"poll_screeps_profiler_method: {error}")
         try:
