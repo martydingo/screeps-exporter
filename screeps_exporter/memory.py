@@ -36,6 +36,7 @@ class Memory:
         self.globalMemory = memory["global"]
 
         self.createGlobalMetrics()
+        self.createCreepMetrics()
         self.createRoomMetrics()
         self.createSpawnMetrics()
         self.createSpawnHeldMetrics()
@@ -44,6 +45,34 @@ class Memory:
         if self.config["exporter"]["monitorProfiler"] == True:
             self.profilerMemory = memory["profiler"]
             self.createProfilerMetrics()
+
+    def createCreepMetrics(self):
+        self.metrics["creeps"] = Gauge(
+            "screeps_creeps",
+            documentation="The number of creeps and their relevant types and tasks",
+            labelnames=["name", "type", "room", "task"],
+        )
+
+        # types = set(
+        #     map(lambda creepName: self.creepMemory[creepName]["type"], self.creepMemory)
+        # )
+        # rooms = set(
+        #     map(lambda creepName: self.creepMemory[creepName]["room"], self.creepMemory)
+        # )
+        # tasks = set(
+        #     map(
+        #         lambda creepName: self.creepMemory[creepName]["curTask"],
+        #         self.creepMemory,
+        #     )
+        # )
+
+        for creepName in self.creepMemory:
+            self.metrics["creeps"].labels(
+                name=creepName,
+                type=self.creepMemory[creepName]["type"],
+                room=self.creepMemory[creepName]["room"],
+                task=self.creepMemory[creepName]["curTask"],
+            )
 
     def createRoomMetrics(self):
         self.createRoomEnergyMetrics()
@@ -710,6 +739,8 @@ class Memory:
             self.globalMemory = memory["global"]
             self.profilerMemory = memory["profiler"]
 
+            self.pollCreepMetrics()
+
             self.pollGlobalGclMetrics()
             self.pollGlobalCpuMetrics()
             self.pollGlobalTimeMetrics()
@@ -724,6 +755,29 @@ class Memory:
             print(f"pollMetrics: {error}")
 
         sleep(self.config["exporter"]["interval"])
+
+    def pollCreepMetrics(self):
+        creepsLabels = set()
+        for creepName in self.creepMemory:
+            creepLabels = (
+                creepName,
+                self.creepMemory[creepName]["type"],
+                self.creepMemory[creepName]["room"],
+                self.creepMemory[creepName]["curTask"],
+            )
+            creepsLabels.add(creepLabels)
+
+            self.metrics["creeps"].labels(
+                name=creepName,
+                type=self.creepMemory[creepName]["type"],
+                room=self.creepMemory[creepName]["room"],
+                task=self.creepMemory[creepName]["curTask"],
+            ).set(1)
+
+        metric = self.metrics["creeps"]
+        for labels in list(metric._metrics.keys()):
+            if labels not in creepsLabels:
+                metric.remove(*labels)
 
     def pollGlobalGclMetrics(self):
         self.metrics["global"]["gcl"]["level"].set(self.globalMemory["gcl"]["level"])
