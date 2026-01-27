@@ -8,3 +8,4 @@ fetchPserverMemory.py
 fetchMainMemory.py
 pserver-mem.json
 main-mem.json
+test-creep-memory.py
