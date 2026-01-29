@@ -728,31 +728,31 @@ class Memory:
             print(f"create_screeps_profiler_method: {error}")
 
     def pollMetrics(self):
-        # try:
-        memory = self.pollMemory()
+        try:
+            memory = self.pollMemory()
 
-        self.roomMemory = memory["rooms"]
-        self.spawnMemory = memory["spawns"]
-        self.spawnHeldMemory = memory["spawnHeld"]
-        self.jobMemory = memory["jobs"]
-        self.creepMemory = memory["creeps"]
-        self.globalMemory = memory["global"]
-        self.profilerMemory = memory["profiler"]
+            self.roomMemory = memory["rooms"]
+            self.spawnMemory = memory["spawns"]
+            self.spawnHeldMemory = memory["spawnHeld"]
+            self.jobMemory = memory["jobs"]
+            self.creepMemory = memory["creeps"]
+            self.globalMemory = memory["global"]
+            self.profilerMemory = memory["profiler"]
 
-        self.pollCreepMetrics()
+            self.pollCreepMetrics()
 
-        self.pollGlobalGclMetrics()
-        self.pollGlobalCpuMetrics()
-        self.pollGlobalTimeMetrics()
+            self.pollGlobalGclMetrics()
+            self.pollGlobalCpuMetrics()
+            self.pollGlobalTimeMetrics()
 
-        self.pollRoomMetrics()
-        self.pollSpawnMetrics()
-        self.pollSpawnHeldMetrics()
-        self.pollJobMetrics()
-        if self.config["exporter"]["monitorProfiler"] == True:
-            self.pollProfilerMetrics()
-        # except Exception as error:
-        # print(f"pollMetrics: {error}")
+            self.pollRoomMetrics()
+            self.pollSpawnMetrics()
+            self.pollSpawnHeldMetrics()
+            self.pollJobMetrics()
+            if self.config["exporter"]["monitorProfiler"] == True:
+                self.pollProfilerMetrics()
+        except Exception as error:
+            print(f"pollMetrics: {error}")
 
         sleep(self.config["exporter"]["interval"])
 
